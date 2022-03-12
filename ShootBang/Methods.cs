@@ -7,13 +7,11 @@
 
 namespace ShootBang
 {
-    using System.Collections.Generic;
     using Exiled.API.Extensions;
     using Exiled.API.Features;
     using Exiled.API.Features.Items;
+    using Exiled.CustomItems.API.Features;
     using Exiled.Events.EventArgs;
-    using Footprinting;
-    using InventorySystem.Items;
     using InventorySystem.Items.Pickups;
     using InventorySystem.Items.ThrowableProjectiles;
     using Mirror;
@@ -35,11 +33,6 @@ namespace ShootBang
         public Methods(Plugin plugin) => this.plugin = plugin;
 
         /// <summary>
-        /// Gets a collection of all grenades to modify the explosion of.
-        /// </summary>
-        public static List<ThrownProjectile> TrackedGrenades { get; } = new List<ThrownProjectile>();
-
-        /// <summary>
         /// Checks a players shot to see if a grenade item was hit.
         /// </summary>
         /// <param name="ev">The produced <see cref="ShootingEventArgs"/>.</param>
@@ -57,7 +50,12 @@ namespace ShootBang
             if (pickup.Type.IsThrowable())
             {
                 NetworkServer.Destroy(pickup.Base.gameObject);
-                SpawnGrenade(ev.Shooter, ev.ShotPosition, pickup.Type);
+
+                if (CustomItem.TryGet(pickup, out CustomItem customItem) &&
+                    customItem is CustomGrenade customGrenade)
+                    customGrenade.Throw(ev.ShotPosition, 0f, plugin.Config.FuseDuration, customGrenade.Type, ev.Shooter);
+                else
+                    SpawnGrenade(pickup.Type, ev.ShotPosition, ev.Shooter);
             }
 
             return true;
@@ -73,10 +71,10 @@ namespace ShootBang
                 return;
 
             ExplosionGrenade explosionGrenade = raycastHit.transform.GetComponent<ExplosionGrenade>();
-            if (explosionGrenade != null && !explosionGrenade.DamageType.Equals(DamageTypes.Scp018))
+            if (explosionGrenade != null && !(explosionGrenade is Scp018Projectile))
             {
                 NetworkServer.Destroy(explosionGrenade.gameObject);
-                SpawnGrenade(ev.Shooter, ev.ShotPosition, ItemType.GrenadeHE);
+                SpawnGrenade(ItemType.GrenadeHE, ev.ShotPosition, ev.Shooter);
                 return;
             }
 
@@ -84,38 +82,25 @@ namespace ShootBang
             if (flash != null)
             {
                 NetworkServer.Destroy(flash.gameObject);
-                SpawnGrenade(ev.Shooter, ev.ShotPosition, ItemType.GrenadeFlash);
+                SpawnGrenade(ItemType.GrenadeFlash, ev.ShotPosition, ev.Shooter);
             }
         }
 
-        // https://github.com/Exiled-Team/EXILED/blob/dev/Exiled.CustomItems/API/Features/CustomGrenade.cs#L84 yoink
-        private void SpawnGrenade(Player player, Vector3 position, ItemType itemType)
+        private void SpawnGrenade(ItemType type, Vector3 position, Player owner)
         {
-            Throwable throwable = new Throwable(itemType, player);
-            throwable.Throw();
-
-            ThrownProjectile thrownProjectile = Object.Instantiate(throwable.Base.Projectile, position, throwable.Owner.CameraTransform.rotation);
-            Transform transform = thrownProjectile.transform;
-            PickupSyncInfo newInfo = new PickupSyncInfo()
+            switch (type)
             {
-                ItemId = throwable.Type,
-                Locked = !throwable.Base._repickupable,
-                Serial = ItemSerialGenerator.GenerateNext(),
-                Position = transform.position,
-                Rotation = new LowPrecisionQuaternion(transform.rotation),
-            };
-
-            if (thrownProjectile is TimeGrenade time)
-                time._fuseTime = plugin.Config.FuseDuration;
-
-            thrownProjectile.NetworkInfo = newInfo;
-            thrownProjectile.PreviousOwner = new Footprint(throwable.Owner.ReferenceHub);
-            NetworkServer.Spawn(thrownProjectile.gameObject);
-            thrownProjectile.InfoReceived(default, newInfo);
-            if (thrownProjectile.TryGetComponent(out Rigidbody component))
-                throwable.Base.PropelBody(component, throwable.Base.FullThrowSettings.StartTorque, throwable.Base.FullThrowSettings.StartVelocity, throwable.Base.FullThrowSettings.UpwardsFactor);
-            thrownProjectile.ServerActivate();
-            TrackedGrenades.Add(thrownProjectile);
+                case ItemType.GrenadeFlash:
+                    FlashGrenade flashGrenade = (FlashGrenade)Item.Create(ItemType.GrenadeFlash);
+                    flashGrenade.FuseTime = plugin.Config.FuseDuration;
+                    flashGrenade.SpawnActive(position, owner);
+                    break;
+                case ItemType.GrenadeHE:
+                    ExplosiveGrenade explosiveGrenade = (ExplosiveGrenade)Item.Create(ItemType.GrenadeHE);
+                    explosiveGrenade.FuseTime = plugin.Config.FuseDuration;
+                    explosiveGrenade.SpawnActive(position, owner);
+                    break;
+            }
         }
     }
 }

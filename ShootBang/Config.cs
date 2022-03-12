@@ -16,13 +16,8 @@ namespace ShootBang
         public bool IsEnabled { get; set; } = true;
 
         /// <summary>
-        /// Gets or sets the fuse duration for shot grenades. Does not apply to shot Scp018 instances.
+        /// Gets or sets the fuse duration for shot grenades.
         /// </summary>
         public float FuseDuration { get; set; } = 0.1f;
-
-        /// <summary>
-        /// Gets or sets the amount to multiply inflicted damage of shot grenades by.
-        /// </summary>
-        public float DamageMultiplier { get; set; } = 0.25f;
     }
 }

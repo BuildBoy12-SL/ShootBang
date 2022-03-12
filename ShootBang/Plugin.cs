@@ -18,10 +18,10 @@ namespace ShootBang
         private EventHandlers eventHandlers;
 
         /// <inheritdoc />
-        public override string Author { get; } = "Build";
+        public override string Author => "Build";
 
         /// <inheritdoc />
-        public override Version RequiredExiledVersion { get; } = new Version(3, 0, 0);
+        public override Version RequiredExiledVersion { get; } = new Version(5, 0, 0);
 
         /// <summary>
         /// Gets an instance of the <see cref="ShootBang.Methods"/> class.
@@ -33,20 +33,14 @@ namespace ShootBang
         {
             Methods = new Methods(this);
             eventHandlers = new EventHandlers(this);
-            Exiled.Events.Handlers.Map.ExplodingGrenade += eventHandlers.OnExplodingGrenade;
-            Exiled.Events.Handlers.Player.Hurting += eventHandlers.OnHurting;
             Exiled.Events.Handlers.Player.Shooting += eventHandlers.OnShooting;
-            Exiled.Events.Handlers.Server.WaitingForPlayers += eventHandlers.OnWaitingForPlayers;
             base.OnEnabled();
         }
 
         /// <inheritdoc />
         public override void OnDisabled()
         {
-            Exiled.Events.Handlers.Map.ExplodingGrenade -= eventHandlers.OnExplodingGrenade;
-            Exiled.Events.Handlers.Player.Hurting -= eventHandlers.OnHurting;
             Exiled.Events.Handlers.Player.Shooting -= eventHandlers.OnShooting;
-            Exiled.Events.Handlers.Server.WaitingForPlayers -= eventHandlers.OnWaitingForPlayers;
             eventHandlers = null;
             Methods = null;
             base.OnDisabled();
