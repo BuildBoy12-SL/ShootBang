@@ -39,10 +39,10 @@ namespace ShootBang
         /// <returns>A value indicating whether a pickup was detected with a linecast.</returns>
         public bool CheckPickup(ShootingEventArgs ev)
         {
-            if (!Physics.Linecast(ev.Shooter.CameraTransform.transform.position, ev.ShotPosition, out RaycastHit raycastHit, PickupMask))
+            if (!Physics.Raycast(ev.Shooter.CameraTransform.transform.position, ev.Shooter.CameraTransform.forward, out RaycastHit raycastHit, 100f, PickupMask))
                 return false;
 
-            var item = raycastHit.transform.GetComponent<ItemPickupBase>();
+            ItemPickupBase item = raycastHit.transform.GetComponent<ItemPickupBase>();
             if (item == null)
                 return true;
 
@@ -53,9 +53,9 @@ namespace ShootBang
 
                 if (CustomItem.TryGet(pickup, out CustomItem customItem) &&
                     customItem is CustomGrenade customGrenade)
-                    customGrenade.Throw(ev.ShotPosition, 0f, plugin.Config.FuseDuration, customGrenade.Type, ev.Shooter);
+                    customGrenade.Throw(raycastHit.point, 0f, plugin.Config.FuseDuration, customGrenade.Type, ev.Shooter);
                 else
-                    SpawnGrenade(pickup.Type, ev.ShotPosition, ev.Shooter);
+                    SpawnGrenade(pickup.Type, raycastHit.point, ev.Shooter);
             }
 
             return true;
@@ -67,14 +67,14 @@ namespace ShootBang
         /// <param name="ev">The produced <see cref="ShootingEventArgs"/>.</param>
         public void CheckAir(ShootingEventArgs ev)
         {
-            if (!Physics.Linecast(ev.Shooter.CameraTransform.transform.position, ev.ShotPosition, out RaycastHit raycastHit, GrenadeMask))
+            if (!Physics.Raycast(ev.Shooter.CameraTransform.transform.position, ev.Shooter.CameraTransform.forward, out RaycastHit raycastHit, 100f, GrenadeMask))
                 return;
 
             ExplosionGrenade explosionGrenade = raycastHit.transform.GetComponent<ExplosionGrenade>();
             if (explosionGrenade != null && !(explosionGrenade is Scp018Projectile))
             {
                 NetworkServer.Destroy(explosionGrenade.gameObject);
-                SpawnGrenade(ItemType.GrenadeHE, ev.ShotPosition, ev.Shooter);
+                SpawnGrenade(ItemType.GrenadeHE, raycastHit.point, ev.Shooter);
                 return;
             }
 
@@ -82,7 +82,7 @@ namespace ShootBang
             if (flash != null)
             {
                 NetworkServer.Destroy(flash.gameObject);
-                SpawnGrenade(ItemType.GrenadeFlash, ev.ShotPosition, ev.Shooter);
+                SpawnGrenade(ItemType.GrenadeFlash, raycastHit.point, ev.Shooter);
             }
         }
 
